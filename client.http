@@ -1,0 +1,52 @@
+### ============================================
+### API Sistema de Chamados - Testes (REST Client)
+### Requer extensão: REST Client (VS Code)
+### ============================================
+
+@baseUrl = http://localhost:3000
+@contentType = application/json
+
+### 1) Healthcheck
+GET {{baseUrl}}/health
+
+
+### 2) Teste do banco (precisa MySQL configurado no .env)
+GET {{baseUrl}}/db
+
+
+### 3) Criar usuário (CLIENTE)
+# Se o email já existir, vai retornar 409
+# Troque o email se precisar repetir o teste
+POST {{baseUrl}}/usuarios
+Content-Type: {{contentType}}
+
+{
+  "nome": "Cliente Teste",
+  "email": "cliente.teste01@email.com",
+  "senha": "123456"
+}
+
+
+### 4) Login (gera token)
+# @name login
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "cliente.teste01@email.com",
+  "senha": "123456"
+}
+
+
+### 5) Guardar o token retornado no login
+@token = {{login.response.body.token}}
+
+
+### 6) /me (rota protegida)
+GET {{baseUrl}}/me
+Authorization: Bearer {{token}}
+
+
+### 7) Testar /me com token inválido (deve dar 401)
+GET {{baseUrl}}/me
+Authorization: Bearer token_invalido

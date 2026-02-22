@@ -1,51 +1,47 @@
-# ===== Node.js =====
-node_modules/
+# =====================================================
+# Node.js / API de Chamados (Node + MySQL + Docker)
+# =====================================================
+
+# Dependências
+**/node_modules/
+
+# Variáveis de ambiente (NUNCA versionar)
+.env
+**/.env
+.env.*
+!/.env.example
+!**/.env.example
+
+# Logs
+logs/
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
-lerna-debug.log*
 
-# Build / dist
+# Cobertura / testes
+coverage/
+.nyc_output/
+
+# Build
 dist/
 build/
-out/
-.next/
-.nuxt/
+
+# Cache / temporários
 .cache/
 .tmp/
-temp/
-coverage/
+tmp/
 
-# ===== Env / secrets =====
-.env
-.env.*
-!.env.example
-
-# ===== Logs =====
-logs/
-*.log
-
-# ===== OS / Editor =====
+# OS
 .DS_Store
 Thumbs.db
+
+# IDEs
 .vscode/
 .idea/
-*.swp
+*.iml
 
-# ===== Docker / Compose =====
-# (geralmente você NÃO versiona dados persistidos)
+# Docker / volumes locais (se você mapear para pasta)
+docker-data/
 mysql/data/
-data/
-*.pid
-
-# ===== Runtime =====
-*.sqlite
-*.db
-
-# ===== Optional: lockfiles (escolha conforme seu time) =====
-# Se você usa npm, normalmente versiona package-lock.json (então NÃO ignore).
-# Se você usa yarn/pnpm, versiona yarn.lock ou pnpm-lock.yaml.
-# package-lock.json
-# yarn.lock
-# pnpm-lock.yaml
