@@ -5,6 +5,7 @@ function isStaff(role) {
 }
 
 async function addMessage(req, res) {
+  let conn;
   try {
     const ticketId = Number(req.params.id);
     const { mensagem } = req.body;
@@ -19,42 +20,69 @@ async function addMessage(req, res) {
 
     const msgNorm = String(mensagem).trim();
 
-    const [tickets] = await pool.query(
-      'SELECT id, status, cliente_id FROM chamados WHERE id = ? LIMIT 1',
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    // trava a linha do chamado para evitar corrida em "assumir"
+    const [tickets] = await conn.query(
+      'SELECT id, status, cliente_id, atendente_id FROM chamados WHERE id = ? FOR UPDATE',
       [ticketId]
     );
-    if (tickets.length === 0) return res.status(404).json({ error: 'chamado não encontrado' });
+
+    if (tickets.length === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'chamado não encontrado' });
+    }
 
     const ticket = tickets[0];
 
     if (ticket.status === 'F') {
+      await conn.rollback();
       return res.status(400).json({ error: 'chamado fechado não aceita novas mensagens' });
     }
 
-    const isOwner = ticket.cliente_id === req.user.id;
-    if (!isStaff(req.user.role) && !isOwner) {
+    const owner = ticket.cliente_id === req.user.id;
+    if (!isStaff(req.user.role) && !owner) {
+      await conn.rollback();
       return res.status(403).json({ error: 'Acesso negado' });
     }
 
-    const [result] = await pool.query(
+    // ✅ auto-assumir: se é staff e não tem atendente, assume e põe status E
+    let assumed = false;
+    if (isStaff(req.user.role) && !ticket.atendente_id) {
+      await conn.query(
+        'UPDATE chamados SET atendente_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [req.user.id, 'E', ticketId]
+      );
+      assumed = true;
+    } else {
+      // só atualiza updated_at
+      await conn.query(
+        'UPDATE chamados SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
+        [ticketId]
+      );
+    }
+
+    // cria mensagem
+    const [result] = await conn.query(
       'INSERT INTO mensagens_chamado (chamado_id, mensagem, usuario_id) VALUES (?, ?, ?)',
       [ticketId, msgNorm, req.user.id]
     );
 
-    // Atualiza updated_at do chamado (pra lista ordenar por atividade)
-    await pool.query(
-      'UPDATE chamados SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [ticketId]
-    );
+    await conn.commit();
 
     return res.status(201).json({
       id: result.insertId,
       chamado_id: ticketId,
       mensagem: msgNorm,
-      usuario_id: req.user.id
+      usuario_id: req.user.id,
+      auto_assumiu: assumed
     });
   } catch (err) {
+    if (conn) await conn.rollback();
     return res.status(500).json({ error: 'erro interno', detail: err.message });
+  } finally {
+    if (conn) conn.release();
   }
 }
 

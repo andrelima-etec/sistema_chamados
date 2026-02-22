@@ -53,7 +53,8 @@ Authorization: Bearer {{token}}
 Content-Type: {{contentType}}
 
 {
-  "assunto": "Problema no acesso"
+  "assunto": "Problema no acesso",
+  "descricao": "Não consigo acessar minha conta, aparece erro ao entrar."
 }
 
 ### 9) Guardar o id do chamado criado para usar nos próximos passos

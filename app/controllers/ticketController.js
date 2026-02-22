@@ -5,9 +5,11 @@ function isStaff(role) {
 }
 
 async function createTicket(req, res) {
+  let conn;
   try {
-    const { assunto } = req.body;
+    const { assunto, descricao } = req.body;
 
+    // regra didática (você pode deixar ADMIN criar para testes)
     if (req.user.role !== 'CLIENTE' && req.user.role !== 'ADMINISTRADOR') {
       return res.status(403).json({ error: 'Apenas CLIENTE pode abrir chamado (ou ADMINISTRADOR para testes).' });
     }
@@ -16,22 +18,46 @@ async function createTicket(req, res) {
       return res.status(400).json({ error: 'assunto é obrigatório (mínimo 3 caracteres)' });
     }
 
-    const assuntoNorm = String(assunto).trim();
+    // agora exigimos descrição para virar 1ª mensagem
+    if (!descricao || String(descricao).trim().length < 3) {
+      return res.status(400).json({ error: 'descricao é obrigatória (mínimo 3 caracteres)' });
+    }
 
-    const [result] = await pool.query(
+    const assuntoNorm = String(assunto).trim();
+    const descNorm = String(descricao).trim();
+
+    conn = await pool.getConnection();
+    await conn.beginTransaction();
+
+    // 1) cria o chamado
+    const [resultTicket] = await conn.query(
       'INSERT INTO chamados (status, assunto, cliente_id, atendente_id) VALUES (?, ?, ?, ?)',
       ['A', assuntoNorm, req.user.id, null]
     );
 
+    const ticketId = resultTicket.insertId;
+
+    // 2) cria a 1ª mensagem (descrição)
+    const [resultMsg] = await conn.query(
+      'INSERT INTO mensagens_chamado (chamado_id, mensagem, usuario_id) VALUES (?, ?, ?)',
+      [ticketId, descNorm, req.user.id]
+    );
+
+    await conn.commit();
+
     return res.status(201).json({
-      id: result.insertId,
+      id: ticketId,
       status: 'A',
       assunto: assuntoNorm,
       cliente_id: req.user.id,
-      atendente_id: null
+      atendente_id: null,
+      mensagem_inicial_id: resultMsg.insertId
     });
   } catch (err) {
+    if (conn) await conn.rollback();
     return res.status(500).json({ error: 'erro interno', detail: err.message });
+  } finally {
+    if (conn) conn.release();
   }
 }
 
