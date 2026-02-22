@@ -20,8 +20,6 @@ async function createUser(req, res) {
       return res.status(400).json({ error: 'senha deve ter pelo menos 6 caracteres' });
     }
 
-    // Por enquanto, para aula, permitimos role opcional.
-    // Em produção, isso seria restrito (só admin cria atendente/admin).
     const allowedRoles = ['CLIENTE', 'ATENDENTE', 'ADMINISTRADOR'];
     const roleFinal = allowedRoles.includes(role) ? role : 'CLIENTE';
 

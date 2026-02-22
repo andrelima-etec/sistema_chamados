@@ -84,6 +84,18 @@ CREATE INDEX idx_chamados_cliente ON chamados(cliente_id);
 CREATE INDEX idx_chamados_atendente ON chamados(atendente_id);
 CREATE INDEX idx_mensagens_chamado ON mensagens_chamado(chamado_id);
 
+-- -----------------------------------------------------
+-- Incluir usuário ADMINISTRADOR para testes
+-- -----------------------------------------------------
+
+INSERT INTO usuarios (nome, email, senha_hash, role)
+VALUES (
+    'Administrador',
+    'administrador@email.com',
+    '$2b$10$wwp59oHl.0jTmog4eIML2OjzmSOwlgzQ6jZjtYpSLxsyXP0KCB0sC',
+    'ADMINISTRADOR'
+);
+
 -- =====================================================
 -- FIM DO SCRIPT
 -- =====================================================

@@ -1,8 +1,3 @@
-### ============================================
-### API Sistema de Chamados - Testes (REST Client)
-### Requer extensão: REST Client (VS Code)
-### ============================================
-
 @baseUrl = http://localhost:3000
 @contentType = application/json
 
@@ -10,7 +5,7 @@
 GET {{baseUrl}}/health
 
 
-### 2) Teste do banco (precisa MySQL configurado no .env)
+### 2) Teste do banco
 GET {{baseUrl}}/db
 
 
@@ -50,3 +45,91 @@ Authorization: Bearer {{token}}
 ### 7) Testar /me com token inválido (deve dar 401)
 GET {{baseUrl}}/me
 Authorization: Bearer token_invalido
+
+### 8) CLIENTE cria chamado
+# @name criaChamado
+POST {{baseUrl}}/chamados
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "assunto": "Problema no acesso"
+}
+
+### 9) Guardar o id do chamado criado para usar nos próximos passos
+@chamadoId = {{criaChamado.response.body.id}}
+
+
+### 10) CLIENTE lista chamados (só os dele)
+GET {{baseUrl}}/chamados
+Authorization: Bearer {{token}}
+
+
+### 11) CLIENTE adiciona mensagem no chamado
+POST {{baseUrl}}/chamados/{{chamadoId}}/mensagens
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "mensagem": "Não consigo acessar minha conta, aparece erro."
+}
+
+
+### 12) CLIENTE vê detalhe do chamado + mensagens
+GET {{baseUrl}}/chamados/{{chamadoId}}
+Authorization: Bearer {{token}}
+
+
+### 13) (Opcional) Login ADMIN (se existir no seu banco)
+# Ajuste o email/senha conforme seu SQL de admin
+# @name loginAdmin
+POST {{baseUrl}}/login
+Content-Type: {{contentType}}
+
+{
+  "email": "administrador@email.com",
+  "senha": "123456"
+}
+
+###
+@tokenAdmin = {{loginAdmin.response.body.token}}
+
+
+### 14) ADMIN lista todos os chamados
+GET {{baseUrl}}/chamados
+Authorization: Bearer {{tokenAdmin}}
+
+
+### 15) ADMIN assume chamado (vira status E)
+PATCH {{baseUrl}}/chamados/{{chamadoId}}/assumir
+Authorization: Bearer {{tokenAdmin}}
+
+
+### 16) ADMIN adiciona mensagem
+POST {{baseUrl}}/chamados/{{chamadoId}}/mensagens
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: {{contentType}}
+
+{
+  "mensagem": "Estou verificando, pode me informar o horário do erro?"
+}
+
+
+### 17) ADMIN altera status para F (fechado)
+PATCH {{baseUrl}}/chamados/{{chamadoId}}/status
+Authorization: Bearer {{tokenAdmin}}
+Content-Type: {{contentType}}
+
+{
+  "status": "F"
+}
+
+
+### 18) CLIENTE tenta mandar mensagem em chamado fechado (deve falhar)
+POST {{baseUrl}}/chamados/{{chamadoId}}/mensagens
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "mensagem": "Obrigado!"
+}
